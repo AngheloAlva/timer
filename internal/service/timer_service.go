@@ -256,9 +256,9 @@ type ListEntriesOpts struct {
 // ListEntries returns time entries matching the given options, newest first.
 // Resolves ProjectSlug → project_id internally.
 func (s *TimerService) ListEntries(ctx context.Context, opts ListEntriesOpts) ([]domain.TimeEntry, error) {
-	max := opts.Max
-	if max <= 0 {
-		max = 20
+	limit := opts.Max
+	if limit <= 0 {
+		limit = 20
 	}
 
 	projectID := ""
@@ -281,7 +281,7 @@ func (s *TimerService) ListEntries(ctx context.Context, opts ListEntriesOpts) ([
 	rows, err := s.q.ListTimeEntries(ctx, gen.ListTimeEntriesParams{
 		MinStartedAt: minMs,
 		ProjectID:    projectID,
-		MaxRows:      int64(max),
+		MaxRows:      int64(limit),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("list time entries: %w", err)

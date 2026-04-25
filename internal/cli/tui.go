@@ -22,7 +22,7 @@ Quit with q, Esc, or Ctrl+C.`,
 			if err != nil {
 				return err
 			}
-			defer app.Close()
+			defer func() { _ = app.Close() }()
 
 			model := tui.NewApp(app.ProjectSvc, app.TaskSvc, app.TimerSvc)
 			p := tea.NewProgram(model, tea.WithAltScreen(), tea.WithContext(cmd.Context()))

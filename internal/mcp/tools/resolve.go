@@ -44,7 +44,7 @@ func (f timerFilters) matches(t domain.Timer) bool {
 //     candidate list rendered for the agent
 func pickActive(timers []domain.Timer, f timerFilters, now time.Time) (domain.Timer, error) {
 	if len(timers) == 0 {
-		return domain.Timer{}, errors.New("No hay timers activos.")
+		return domain.Timer{}, errors.New("no hay timers activos")
 	}
 
 	matches := make([]domain.Timer, 0, len(timers))
@@ -59,12 +59,12 @@ func pickActive(timers []domain.Timer, f timerFilters, now time.Time) (domain.Ti
 		return matches[0], nil
 	case 0:
 		return domain.Timer{}, fmt.Errorf(
-			"Ningún timer activo coincide con los filtros. Timers activos:\n%s",
+			"ningún timer activo coincide con los filtros. Timers activos:\n%s",
 			renderTimerList(timers, now),
 		)
 	default:
 		return domain.Timer{}, fmt.Errorf(
-			"Hay %d timers activos y no pude desambiguar. Especificá taskTitle o projectSlug:\n%s",
+			"hay %d timers activos y no pude desambiguar. Especificá taskTitle o projectSlug:\n%s",
 			len(matches), renderTimerList(matches, now),
 		)
 	}

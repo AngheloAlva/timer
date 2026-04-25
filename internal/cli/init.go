@@ -27,7 +27,7 @@ verifying that everything is wired correctly.`,
 			if err != nil {
 				return err
 			}
-			defer app.Close()
+			defer func() { _ = app.Close() }()
 
 			cmd.Printf("Database ready at %s\n", path)
 			if app.JustSeeded {

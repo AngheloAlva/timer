@@ -87,9 +87,9 @@ func activeTimersHandler(svc *service.TimerService) mcpserver.ResourceHandlerFun
 }
 
 type taskTotalJSON struct {
-	ID         string `json:"id"`
-	Title      string `json:"title"`
-	TotalSec   int64  `json:"totalSec"`
+	ID       string `json:"id"`
+	Title    string `json:"title"`
+	TotalSec int64  `json:"totalSec"`
 }
 
 type projectTotalJSON struct {

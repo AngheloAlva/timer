@@ -33,7 +33,7 @@ subsequent commands.`,
 			if err != nil {
 				return err
 			}
-			defer app.Close()
+			defer func() { _ = app.Close() }()
 
 			t, err := app.TaskSvc.Create(cmd.Context(), args[0], args[1])
 			if err != nil {
@@ -65,7 +65,7 @@ func newTaskListCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			defer app.Close()
+			defer func() { _ = app.Close() }()
 
 			tasks, err := app.TaskSvc.List(cmd.Context(), projectSlug, includeAll)
 			if err != nil {
@@ -113,7 +113,7 @@ flip — so 'task done' is a one-shot "I'm finished here" command.`,
 			if err != nil {
 				return err
 			}
-			defer app.Close()
+			defer func() { _ = app.Close() }()
 
 			res, err := app.TaskSvc.MarkDone(cmd.Context(), args[0])
 			if err != nil {
@@ -128,4 +128,3 @@ flip — so 'task done' is a one-shot "I'm finished here" command.`,
 		},
 	}
 }
-

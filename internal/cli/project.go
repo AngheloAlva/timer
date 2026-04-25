@@ -32,7 +32,7 @@ spaces → dashes) and used as the handle in commands like 'task add' and
 			if err != nil {
 				return err
 			}
-			defer app.Close()
+			defer func() { _ = app.Close() }()
 
 			p, err := app.ProjectSvc.Create(cmd.Context(), args[0])
 			if err != nil {
@@ -61,7 +61,7 @@ func newProjectListCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			defer app.Close()
+			defer func() { _ = app.Close() }()
 
 			projects, err := app.ProjectSvc.List(cmd.Context(), includeArchived)
 			if err != nil {

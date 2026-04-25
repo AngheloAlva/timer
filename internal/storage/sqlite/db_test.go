@@ -13,7 +13,7 @@ func TestOpen_CreateesAllTables(t *testing.T) {
 	if err != nil {
 		t.Fatalf("open: %v", err)
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	expected := []string{
 		"projects",

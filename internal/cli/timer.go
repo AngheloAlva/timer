@@ -27,7 +27,7 @@ timer per task is the only restriction.`,
 			if err != nil {
 				return err
 			}
-			defer app.Close()
+			defer func() { _ = app.Close() }()
 
 			t, err := app.TimerSvc.Start(cmd.Context(), args[0])
 			if err != nil {
@@ -65,7 +65,7 @@ timer atomically. Use --all to stop every active timer at once.`,
 			if err != nil {
 				return err
 			}
-			defer app.Close()
+			defer func() { _ = app.Close() }()
 
 			if stopAll {
 				entries, err := app.TimerSvc.StopAll(cmd.Context())
@@ -106,7 +106,7 @@ an already-paused timer is a no-op (no error).`,
 			if err != nil {
 				return err
 			}
-			defer app.Close()
+			defer func() { _ = app.Close() }()
 
 			t, err := app.TimerSvc.Pause(cmd.Context(), args[0])
 			if err != nil {
@@ -134,7 +134,7 @@ func newResumeCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			defer app.Close()
+			defer func() { _ = app.Close() }()
 
 			t, err := app.TimerSvc.Resume(cmd.Context(), args[0])
 			if err != nil {
@@ -164,7 +164,7 @@ func newListCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			defer app.Close()
+			defer func() { _ = app.Close() }()
 
 			timers, err := app.TimerSvc.ListActive(cmd.Context())
 			if err != nil {
@@ -219,7 +219,7 @@ Defaults to the last 50 entries across all projects. Use --today,
 			if err != nil {
 				return err
 			}
-			defer app.Close()
+			defer func() { _ = app.Close() }()
 
 			opts := service.ListEntriesOpts{
 				ProjectSlug: projectSlug,
@@ -266,4 +266,3 @@ Defaults to the last 50 entries across all projects. Use --today,
 	cmd.MarkFlagsMutuallyExclusive("today", "week")
 	return cmd
 }
-

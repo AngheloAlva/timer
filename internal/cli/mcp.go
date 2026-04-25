@@ -51,7 +51,7 @@ The MCP server requires an existing timer database. If you have not run
 			if err != nil {
 				return err
 			}
-			defer app.Close()
+			defer func() { _ = app.Close() }()
 
 			srv := mcp.NewServer(app.ProjectSvc, app.TaskSvc, app.TimerSvc)
 			return mcpserver.ServeStdio(srv)

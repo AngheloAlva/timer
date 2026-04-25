@@ -13,7 +13,18 @@ linters:
     - staticcheck
     - unused
     - revive
-    - misspell
+  settings:
+    revive:
+      rules:
+        # disabled — bilingual codebase, package docs are tracked in docs/
+        - name: package-comments
+          disabled: true
+        # disabled — cobra RunE has a fixed signature, can't drop unused args
+        - name: unused-parameter
+          disabled: true
+        # disabled — pre-1.0 project, exported docs come with API freeze
+        - name: exported
+          disabled: true
 
 formatters:
   enable:

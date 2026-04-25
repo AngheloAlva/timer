@@ -146,17 +146,17 @@ func (m reportsModel) View() string {
 		return b.String()
 	}
 
-	b.WriteString(fmt.Sprintf("Total: %s\n\n", m.styles.Bold.Render(format.Duration(m.summary.Total))))
+	fmt.Fprintf(&b, "Total: %s\n\n", m.styles.Bold.Render(format.Duration(m.summary.Total)))
 	for _, p := range m.summary.Projects {
-		b.WriteString(fmt.Sprintf("  %s  %s\n",
+		fmt.Fprintf(&b, "  %s  %s\n",
 			m.styles.Bold.Render(fmt.Sprintf("%-28s", p.Name+" ("+p.Slug+")")),
 			m.styles.StateOK.Render(format.Duration(p.Total)),
-		))
+		)
 		for _, t := range p.Tasks {
-			b.WriteString(fmt.Sprintf("    %s  %s\n",
+			fmt.Fprintf(&b, "    %s  %s\n",
 				fmt.Sprintf("%-30s", "- "+t.Title),
 				m.styles.Muted.Render(format.Duration(t.Total)),
-			))
+			)
 		}
 	}
 

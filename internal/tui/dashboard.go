@@ -132,8 +132,8 @@ func (m dashboardModel) View() string {
 	b.WriteString("\n")
 	b.WriteString(m.styles.Section.Render("Today"))
 	b.WriteString("\n")
-	b.WriteString(fmt.Sprintf("  Total tracked: %s\n",
-		m.styles.Bold.Render(format.Duration(m.todayTotal))))
+	fmt.Fprintf(&b, "  Total tracked: %s\n",
+		m.styles.Bold.Render(format.Duration(m.todayTotal)))
 
 	return b.String()
 }
@@ -154,4 +154,3 @@ func (m dashboardModel) renderTimerRow(t domain.Timer) string {
 		"  ", state, "  ", id, "  ", project, " / ", title, "  → ", elapsed,
 	)
 }
-

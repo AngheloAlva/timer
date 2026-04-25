@@ -123,4 +123,3 @@ func projectFromGen(r gen.Project) domain.Project {
 		UpdatedAt: time.UnixMilli(r.UpdatedAt),
 	}
 }
-

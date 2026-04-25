@@ -37,7 +37,7 @@ both at the project and task level.`,
 			if err != nil {
 				return err
 			}
-			defer app.Close()
+			defer func() { _ = app.Close() }()
 
 			now := time.Now()
 			var (

@@ -39,17 +39,17 @@ func Open(path string) (*DB, error) {
 	conn.SetMaxOpenConns(1)
 
 	if err := conn.Ping(); err != nil {
-		conn.Close()
+		_ = conn.Close()
 		return nil, fmt.Errorf("ping sqlite: %w", err)
 	}
 
 	if err := applyPragmas(conn); err != nil {
-		conn.Close()
+		_ = conn.Close()
 		return nil, fmt.Errorf("apply pragmas: %w", err)
 	}
 
 	if err := runMigrations(conn); err != nil {
-		conn.Close()
+		_ = conn.Close()
 		return nil, fmt.Errorf("run migrations: %w", err)
 	}
 

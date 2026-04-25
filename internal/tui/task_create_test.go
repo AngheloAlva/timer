@@ -12,10 +12,10 @@ func TestTaskCreateModal_RendersAllSteps(t *testing.T) {
 	base := newTaskCreateModel(nil, nil, styles)
 
 	cases := []struct {
-		name      string
-		model     taskCreateModel
-		mustHave  string
-		mustNot   string
+		name     string
+		model    taskCreateModel
+		mustHave string
+		mustNot  string
 	}{
 		{name: "loading", model: base, mustHave: "Loading projects", mustNot: "Pick a project"},
 		{
