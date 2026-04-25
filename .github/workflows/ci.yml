@@ -36,3 +36,16 @@ jobs:
         with:
           go-version: "1.26"
       - run: CGO_ENABLED=0 go build -o bin/timer ./cmd/timer
+
+  goreleaser-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.26"
+      - uses: goreleaser/goreleaser-action@v6
+        with:
+          distribution: goreleaser
+          version: "~> v2"
+          args: check

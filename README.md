@@ -6,7 +6,29 @@ Local-first time tracker with CLI, TUI and MCP. Single Go binary, SQLite under t
 
 ## Install
 
-Coming soon (Homebrew tap + GitHub Releases). For now:
+### Homebrew (macOS / Linux)
+
+```bash
+brew install AngheloAlva/tap/timer
+timer init
+```
+
+### Manual download
+
+Grab the tarball for your OS/arch from
+[GitHub Releases](https://github.com/AngheloAlva/timer/releases), extract,
+move `timer` into your `PATH`, then run `timer init`.
+
+On macOS, binaries are not signed. Drop the quarantine flag once after
+installing manually:
+
+```bash
+xattr -d com.apple.quarantine /usr/local/bin/timer
+```
+
+(Not needed when installing via Homebrew — brew strips the flag for you.)
+
+### From source
 
 ```bash
 git clone https://github.com/AngheloAlva/timer

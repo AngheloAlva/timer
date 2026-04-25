@@ -1,0 +1,78 @@
+version: 2
+
+project_name: timer
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: timer
+    main: ./cmd/timer
+    binary: timer
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - darwin
+      - linux
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w
+      - -X github.com/AngheloAlva/timer/internal/version.Version={{.Version}}
+      - -X github.com/AngheloAlva/timer/internal/version.Commit={{.Commit}}
+      - -X github.com/AngheloAlva/timer/internal/version.Date={{.Date}}
+
+archives:
+  - formats: [tar.gz]
+    name_template: >-
+      {{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}
+    files:
+      - README.md
+      - LICENSE
+
+checksum:
+  name_template: "checksums.txt"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^chore:"
+      - "^ci:"
+  groups:
+    - title: Features
+      regexp: "^feat"
+      order: 0
+    - title: Bug fixes
+      regexp: "^fix"
+      order: 1
+    - title: Other
+      order: 99
+
+homebrew_casks:
+  - name: timer
+    binaries:
+      - timer
+    homepage: "https://github.com/AngheloAlva/timer"
+    description: "Local-first time tracker with CLI, TUI and MCP"
+    repository:
+      owner: AngheloAlva
+      name: homebrew-tap
+      token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
+    hooks:
+      post:
+        install: |
+          if OS.mac?
+            system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/timer"]
+          end
+
+release:
+  github:
+    owner: AngheloAlva
+    name: timer
+  draft: false
+  prerelease: auto
