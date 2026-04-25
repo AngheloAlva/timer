@@ -1,0 +1,19 @@
+run:
+  timeout: 3m
+  tests: true
+
+linters:
+  disable-all: true
+  enable:
+    - errcheck      # unchecked errors
+    - govet         # suspicious constructs (vet)
+    - ineffassign   # ineffective assignments
+    - staticcheck   # large static analysis bundle
+    - unused        # unused code
+    - gofmt         # formatting
+    - revive        # style/lint replacement for golint
+    - gosimple      # simplifications
+    - misspell      # typos in comments/strings
+
+issues:
+  exclude-use-default: false

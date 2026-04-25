@@ -1,0 +1,32 @@
+# Binaries
+bin/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test artifacts
+*.test
+*.out
+coverage.out
+coverage.html
+
+# Editor / OS
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# Build / release
+dist/
+
+# Local env
+.env
+.env.local
+
+# Local SQLite DB if someone runs the binary from repo root
+*.db
+*.db-journal
+*.db-wal
+*.db-shm

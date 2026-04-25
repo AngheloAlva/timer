@@ -1,0 +1,137 @@
+package cli
+
+import (
+	"github.com/spf13/cobra"
+)
+
+// newTaskCmd builds the `timer task` command tree.
+func newTaskCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:     "task",
+		Aliases: []string{"tasks"},
+		Short:   "Manage tasks",
+		Long:    `Tasks live inside a project. They have a status (todo, in_progress, done, archived) and an 8-char short id used by the timer commands.`,
+	}
+	cmd.AddCommand(newTaskAddCmd(), newTaskListCmd(), newTaskDoneCmd())
+	return cmd
+}
+
+func newTaskAddCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "add <project-slug> <title>",
+		Short: "Create a new task in a project",
+		Long: `Create a new task in the given project. The task starts in 'todo'
+status and gets a UUID — only the first 8 chars are shown and used in
+subsequent commands.`,
+		Example: `  timer task add timer-cli "Implement timers"
+  timer task add inbox "Buy milk"`,
+		Args: cobra.ExactArgs(2),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			app, err := openApp()
+			if err != nil {
+				return err
+			}
+			defer app.Close()
+
+			t, err := app.TaskSvc.Create(cmd.Context(), args[0], args[1])
+			if err != nil {
+				return err
+			}
+
+			cmd.Printf("Created %q in %s (id: %s)\n", t.Title, t.ProjectSlug, shortID(t.ID))
+			return nil
+		},
+	}
+}
+
+func newTaskListCmd() *cobra.Command {
+	var projectSlug string
+	var includeAll bool
+
+	cmd := &cobra.Command{
+		Use:     "list",
+		Aliases: []string{"ls"},
+		Short:   "List tasks (grouped by project)",
+		Long: `List tasks grouped by project. By default hides 'done' and
+'archived' tasks — use --all to include them.`,
+		Example: `  timer task list
+  timer task list --project timer-cli
+  timer task list --all`,
+		Args: cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			app, err := openApp()
+			if err != nil {
+				return err
+			}
+			defer app.Close()
+
+			tasks, err := app.TaskSvc.List(cmd.Context(), projectSlug, includeAll)
+			if err != nil {
+				return err
+			}
+
+			if len(tasks) == 0 {
+				cmd.Println(`No tasks. Create one with: timer task add <project-slug> "My task"`)
+				return nil
+			}
+
+			currentSlug := ""
+			for _, t := range tasks {
+				if t.ProjectSlug != currentSlug {
+					if currentSlug != "" {
+						cmd.Println()
+					}
+					cmd.Printf("%s (%s)\n", t.ProjectName, t.ProjectSlug)
+					currentSlug = t.ProjectSlug
+				}
+				cmd.Printf("  %s  [%-11s]  %s\n", shortID(t.ID), t.Status, t.Title)
+			}
+			return nil
+		},
+	}
+
+	cmd.Flags().StringVarP(&projectSlug, "project", "p", "", "filter by project slug")
+	cmd.Flags().BoolVar(&includeAll, "all", false, "include done and archived tasks")
+	return cmd
+}
+
+func newTaskDoneCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "done <task-id-prefix>",
+		Short: "Mark a task as done (closes any active timer first)",
+		Long: `Mark a task as done. Resolves the prefix git-style: any unique
+prefix of the task's UUID works. If the task has a running timer, it
+is closed atomically (a time entry gets written) before the status
+flip — so 'task done' is a one-shot "I'm finished here" command.`,
+		Example: `  timer task done aa86            # 4 chars are usually enough
+  timer task done aa866ddf        # the full short id from 'task list'`,
+		Args: cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			app, err := openApp()
+			if err != nil {
+				return err
+			}
+			defer app.Close()
+
+			res, err := app.TaskSvc.MarkDone(cmd.Context(), args[0])
+			if err != nil {
+				return err
+			}
+
+			cmd.Printf("Done: %s  %s\n", shortID(res.Task.ID), res.Task.Title)
+			if res.Entry != nil {
+				cmd.Printf("  (closed running timer → %s)\n", formatDuration(res.Entry.DurationSec))
+			}
+			return nil
+		},
+	}
+}
+
+// shortID returns the first 8 chars of a UUID for display. Matches the
+// prefix accepted by `task done`.
+func shortID(id string) string {
+	if len(id) <= 8 {
+		return id
+	}
+	return id[:8]
+}
