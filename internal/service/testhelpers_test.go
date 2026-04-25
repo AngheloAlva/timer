@@ -32,7 +32,7 @@ func newTestApp(t *testing.T) *testApp {
 	return &testApp{
 		DB:         db,
 		Q:          q,
-		ProjectSvc: NewProjectService(q),
+		ProjectSvc: NewProjectService(db.Conn(), q),
 		TaskSvc:    NewTaskService(db.Conn(), q),
 		TimerSvc:   NewTimerService(db.Conn(), q),
 	}

@@ -9,11 +9,17 @@ import (
 )
 
 type Querier interface {
+	ArchiveProject(ctx context.Context, arg ArchiveProjectParams) error
 	CountProjects(ctx context.Context) (int64, error)
+	CountTasksByProject(ctx context.Context, projectID string) (int64, error)
+	CountTimeEntriesByProject(ctx context.Context, projectID string) (int64, error)
+	CountTimeEntriesByTask(ctx context.Context, taskID string) (int64, error)
 	CreateProject(ctx context.Context, arg CreateProjectParams) error
 	CreateTask(ctx context.Context, arg CreateTaskParams) error
 	CreateTimeEntry(ctx context.Context, arg CreateTimeEntryParams) error
 	CreateTimer(ctx context.Context, arg CreateTimerParams) error
+	DeleteProject(ctx context.Context, id string) error
+	DeleteTask(ctx context.Context, id string) error
 	DeleteTimer(ctx context.Context, id string) error
 	FindTasksByIDPrefix(ctx context.Context, prefix string) ([]Task, error)
 	FindTimersByIDPrefix(ctx context.Context, prefix string) ([]Timer, error)
@@ -22,6 +28,7 @@ type Querier interface {
 	GetTimerByID(ctx context.Context, id string) (Timer, error)
 	GetTimerByTaskID(ctx context.Context, taskID string) (Timer, error)
 	ListActiveTimers(ctx context.Context) ([]ListActiveTimersRow, error)
+	ListActiveTimersByProject(ctx context.Context, projectID string) ([]ListActiveTimersByProjectRow, error)
 	ListProjects(ctx context.Context, includeArchived interface{}) ([]Project, error)
 	ListTasks(ctx context.Context, includeDone interface{}) ([]ListTasksRow, error)
 	ListTasksByProject(ctx context.Context, arg ListTasksByProjectParams) ([]ListTasksByProjectRow, error)

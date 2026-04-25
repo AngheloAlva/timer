@@ -41,7 +41,7 @@ func openApp() (*appCtx, error) {
 	q := gen.New(db.Conn())
 	app := &appCtx{
 		DB:         db,
-		ProjectSvc: service.NewProjectService(q),
+		ProjectSvc: service.NewProjectService(db.Conn(), q),
 		TaskSvc:    service.NewTaskService(db.Conn(), q),
 		TimerSvc:   service.NewTimerService(db.Conn(), q),
 	}

@@ -14,7 +14,45 @@ func newTaskCmd() *cobra.Command {
 		Short:   "Manage tasks",
 		Long:    `Tasks live inside a project. They have a status (todo, in_progress, done, archived) and an 8-char short id used by the timer commands.`,
 	}
-	cmd.AddCommand(newTaskAddCmd(), newTaskListCmd(), newTaskDoneCmd())
+	cmd.AddCommand(newTaskAddCmd(), newTaskListCmd(), newTaskDoneCmd(), newTaskDeleteCmd())
+	return cmd
+}
+
+func newTaskDeleteCmd() *cobra.Command {
+	var force bool
+
+	cmd := &cobra.Command{
+		Use:     "delete <task-id-prefix>",
+		Aliases: []string{"rm"},
+		Short:   "Hard-delete a task (irreversible)",
+		Long: `Delete a task AND its active timer (if any) and every time entry
+of the task. This is irreversible. By default refuses if the task has any
+time entry or an active timer — pass --force to bypass and accept the data
+loss. Tasks with no history can be deleted without --force.`,
+		Example: `  timer task delete aa86             # only if the task has no history
+  timer task delete aa86 --force     # nuke timer + entries`,
+		Args: cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			app, err := openApp()
+			if err != nil {
+				return err
+			}
+			defer func() { _ = app.Close() }()
+
+			res, err := app.TaskSvc.Delete(cmd.Context(), args[0], force)
+			if err != nil {
+				return err
+			}
+			cmd.Printf("Deleted task %s  %q  — removed %d time entr(ies)",
+				format.ShortID(res.Task.ID), res.Task.Title, res.TimeEntryCount)
+			if res.HadActiveTimer {
+				cmd.Print(", and 1 active timer")
+			}
+			cmd.Println(".")
+			return nil
+		},
+	}
+	cmd.Flags().BoolVar(&force, "force", false, "delete even if the task has time entries or an active timer")
 	return cmd
 }
 

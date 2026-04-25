@@ -40,6 +40,12 @@ JOIN projects p ON p.id = t.project_id
 WHERE (sqlc.arg(include_done) = 1 OR t.status NOT IN ('done', 'archived'))
 ORDER BY p.name COLLATE NOCASE ASC, t.created_at ASC;
 
+-- name: DeleteTask :exec
+DELETE FROM tasks WHERE id = ?;
+
+-- name: CountTimeEntriesByTask :one
+SELECT COUNT(*) AS total FROM time_entries WHERE task_id = ?;
+
 -- name: ListTasksByProject :many
 SELECT t.id, t.project_id, t.title, t.description, t.status, t.external_ref, t.created_at, t.updated_at,
        p.name AS project_name,

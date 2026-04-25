@@ -2,12 +2,120 @@ package service
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"testing"
 
 	"github.com/AngheloAlva/timer/internal/domain"
 )
 
+func TestTaskService_Delete_NoHistory(t *testing.T) {
+	app := newTestApp(t)
+	ctx := context.Background()
+	if _, err := app.ProjectSvc.Create(ctx, "P"); err != nil {
+		t.Fatal(err)
+	}
+	task, err := app.TaskSvc.Create(ctx, "p", "T")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	res, err := app.TaskSvc.Delete(ctx, task.ID, false)
+	if err != nil {
+		t.Fatalf("delete: %v", err)
+	}
+	if res.TimeEntryCount != 0 || res.HadActiveTimer {
+		t.Errorf("unexpected result: %+v", res)
+	}
+
+	tasks, _ := app.TaskSvc.List(ctx, "p", true)
+	if len(tasks) != 0 {
+		t.Errorf("expected task gone, got %d", len(tasks))
+	}
+}
+
+func TestTaskService_Delete_RefusesWithTimeEntries(t *testing.T) {
+	app := newTestApp(t)
+	ctx := context.Background()
+	if _, err := app.ProjectSvc.Create(ctx, "P"); err != nil {
+		t.Fatal(err)
+	}
+	task, _ := app.TaskSvc.Create(ctx, "p", "T")
+	if _, err := app.TimerSvc.Start(ctx, task.ID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := app.TimerSvc.Stop(ctx, task.ID); err != nil {
+		t.Fatal(err)
+	}
+
+	_, err := app.TaskSvc.Delete(ctx, task.ID, false)
+	if !errors.Is(err, ErrTaskHasHistory) {
+		t.Errorf("expected ErrTaskHasHistory, got %v", err)
+	}
+}
+
+func TestTaskService_Delete_RefusesWithActiveTimer(t *testing.T) {
+	app := newTestApp(t)
+	ctx := context.Background()
+	if _, err := app.ProjectSvc.Create(ctx, "P"); err != nil {
+		t.Fatal(err)
+	}
+	task, _ := app.TaskSvc.Create(ctx, "p", "T")
+	if _, err := app.TimerSvc.Start(ctx, task.ID); err != nil {
+		t.Fatal(err)
+	}
+
+	_, err := app.TaskSvc.Delete(ctx, task.ID, false)
+	if !errors.Is(err, ErrTaskHasHistory) {
+		t.Errorf("expected ErrTaskHasHistory, got %v", err)
+	}
+}
+
+func TestTaskService_Delete_ForceCascades(t *testing.T) {
+	app := newTestApp(t)
+	ctx := context.Background()
+	if _, err := app.ProjectSvc.Create(ctx, "P"); err != nil {
+		t.Fatal(err)
+	}
+	task, _ := app.TaskSvc.Create(ctx, "p", "T")
+	if _, err := app.TimerSvc.Start(ctx, task.ID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := app.TimerSvc.Stop(ctx, task.ID); err != nil {
+		t.Fatal(err)
+	}
+	// Active timer + previous entry both present.
+	if _, err := app.TimerSvc.Start(ctx, task.ID); err != nil {
+		t.Fatal(err)
+	}
+
+	res, err := app.TaskSvc.Delete(ctx, task.ID, true)
+	if err != nil {
+		t.Fatalf("delete --force: %v", err)
+	}
+	if res.TimeEntryCount != 1 {
+		t.Errorf("TimeEntryCount = %d, want 1", res.TimeEntryCount)
+	}
+	if !res.HadActiveTimer {
+		t.Errorf("expected HadActiveTimer=true")
+	}
+
+	active, _ := app.TimerSvc.ListActive(ctx)
+	if len(active) != 0 {
+		t.Errorf("expected timer cascaded, got %d", len(active))
+	}
+	entries, _ := app.TimerSvc.ListEntries(ctx, ListEntriesOpts{})
+	if len(entries) != 0 {
+		t.Errorf("expected entries cascaded, got %d", len(entries))
+	}
+}
+
+func TestTaskService_Delete_NotFound(t *testing.T) {
+	app := newTestApp(t)
+	if _, err := app.TaskSvc.Delete(context.Background(), "deadbeef", true); err == nil {
+		t.Errorf("expected error on unknown prefix")
+	}
+}
 func TestTaskService_Create(t *testing.T) {
 	app := newTestApp(t)
 	ctx := context.Background()

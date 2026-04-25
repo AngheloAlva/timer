@@ -257,6 +257,67 @@ func (s *TaskService) MarkDone(ctx context.Context, idPrefix string) (MarkDoneRe
 	return MarkDoneResult{Task: out, Entry: entry}, nil
 }
 
+// ErrTaskHasHistory is returned by Delete when the task has time_entries
+// or an active timer and force=false.
+var ErrTaskHasHistory = errors.New("task has time entries or an active timer; pass force=true to delete anyway")
+
+// DeleteTaskResult reports what was destroyed by a hard task delete.
+type DeleteTaskResult struct {
+	Task           domain.Task
+	TimeEntryCount int64
+	HadActiveTimer bool
+}
+
+// Delete hard-deletes a task. Refuses (without force) when the task has any
+// time_entries or an active timer — those represent real history / in-flight
+// work. With force=true, CASCADE removes the timer and every time_entry of
+// this task.
+func (s *TaskService) Delete(ctx context.Context, idPrefix string, force bool) (DeleteTaskResult, error) {
+	idPrefix = strings.TrimSpace(idPrefix)
+	if idPrefix == "" {
+		return DeleteTaskResult{}, errors.New("task id prefix cannot be empty")
+	}
+
+	matches, err := s.q.FindTasksByIDPrefix(ctx, idPrefix+"%")
+	if err != nil {
+		return DeleteTaskResult{}, fmt.Errorf("resolve task: %w", err)
+	}
+	if len(matches) == 0 {
+		return DeleteTaskResult{}, fmt.Errorf("no task matches prefix %q", idPrefix)
+	}
+	if len(matches) > 1 {
+		return DeleteTaskResult{}, fmt.Errorf("ambiguous prefix %q: matches %d tasks", idPrefix, len(matches))
+	}
+	t := matches[0]
+
+	entryCount, err := s.q.CountTimeEntriesByTask(ctx, t.ID)
+	if err != nil {
+		return DeleteTaskResult{}, fmt.Errorf("count time entries: %w", err)
+	}
+
+	hadTimer := false
+	if _, err := s.q.GetTimerByTaskID(ctx, t.ID); err == nil {
+		hadTimer = true
+	} else if !errors.Is(err, sql.ErrNoRows) {
+		return DeleteTaskResult{}, fmt.Errorf("probe timer: %w", err)
+	}
+
+	if !force && (entryCount > 0 || hadTimer) {
+		return DeleteTaskResult{}, fmt.Errorf("%w (id: %s, entries: %d, activeTimer: %v)",
+			ErrTaskHasHistory, t.ID, entryCount, hadTimer)
+	}
+
+	if err := s.q.DeleteTask(ctx, t.ID); err != nil {
+		return DeleteTaskResult{}, fmt.Errorf("delete task: %w", err)
+	}
+
+	return DeleteTaskResult{
+		Task:           taskFromGen(t),
+		TimeEntryCount: entryCount,
+		HadActiveTimer: hadTimer,
+	}, nil
+}
+
 // timerFromGen converts a gen.Timer into a partially-filled domain.Timer
 // (no project/task display info). Used internally by MarkDone for elapsed
 // calculation; we don't need denormalized fields there.

@@ -9,6 +9,7 @@ import (
 	mcpserver "github.com/mark3labs/mcp-go/server"
 
 	"github.com/AngheloAlva/timer/internal/domain"
+	"github.com/AngheloAlva/timer/internal/format"
 	"github.com/AngheloAlva/timer/internal/mcp/projectdetect"
 	"github.com/AngheloAlva/timer/internal/service"
 )
@@ -29,6 +30,24 @@ func RegisterProjectTools(s *mcpserver.MCPServer, svc *service.ProjectService) {
 			mcp.WithString("name", mcp.Required(), mcp.Description("Human-readable project name.")),
 		),
 		createProjectHandler(svc),
+	)
+
+	s.AddTool(
+		mcp.NewTool("archive_project",
+			mcp.WithDescription("Archive a project (soft delete). The project is hidden from the default list but tasks and time entries are preserved. If any task has a running timer, it is closed atomically before the archive. Idempotent."),
+			mcp.WithString("slug", mcp.Required(), mcp.Description("Slug of the project to archive.")),
+		),
+		archiveProjectHandler(svc),
+	)
+
+	s.AddTool(
+		mcp.NewTool("delete_project",
+			mcp.WithDescription("HARD-delete a project AND every task, timer, and time entry under it. IRREVERSIBLE. By default refuses unless the project is already archived — call archive_project first, or pass force=true to bypass and accept the data loss. Requires confirm=true on every call as a safety check."),
+			mcp.WithString("slug", mcp.Required(), mcp.Description("Slug of the project to delete.")),
+			mcp.WithBoolean("confirm", mcp.Required(), mcp.Description("Must be true to actually delete. Safety guard against accidental calls.")),
+			mcp.WithBoolean("force", mcp.Description("If true, skip the 'must be archived' guard. Default false.")),
+		),
+		deleteProjectHandler(svc),
 	)
 }
 
@@ -56,6 +75,53 @@ func createProjectHandler(svc *service.ProjectService) mcpserver.ToolHandlerFunc
 		}
 		return mcp.NewToolResultText(fmt.Sprintf(
 			"Proyecto creado: %s (slug: %s).", p.Name, p.Slug,
+		)), nil
+	}
+}
+
+func archiveProjectHandler(svc *service.ProjectService) mcpserver.ToolHandlerFunc {
+	return func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		slug := strings.TrimSpace(mcp.ParseString(req, "slug", ""))
+		if slug == "" {
+			return mcp.NewToolResultError("slug is required"), nil
+		}
+		res, err := svc.Archive(ctx, slug)
+		if err != nil {
+			return mcp.NewToolResultErrorFromErr("archive_project", err), nil
+		}
+		if res.AlreadyArchived {
+			return mcp.NewToolResultText(fmt.Sprintf(
+				"El proyecto %q (%s) ya estaba archivado.", res.Project.Name, res.Project.Slug,
+			)), nil
+		}
+		var b strings.Builder
+		fmt.Fprintf(&b, "Proyecto archivado: %s (%s).", res.Project.Name, res.Project.Slug)
+		for _, e := range res.ClosedEntries {
+			fmt.Fprintf(&b, "\n  • timer cerrado en %q → %s", e.TaskTitle, format.Duration(e.DurationSec))
+		}
+		return mcp.NewToolResultText(b.String()), nil
+	}
+}
+
+func deleteProjectHandler(svc *service.ProjectService) mcpserver.ToolHandlerFunc {
+	return func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		slug := strings.TrimSpace(mcp.ParseString(req, "slug", ""))
+		if slug == "" {
+			return mcp.NewToolResultError("slug is required"), nil
+		}
+		if !mcp.ParseBoolean(req, "confirm", false) {
+			return mcp.NewToolResultError("confirm must be true to delete a project (safety guard)"), nil
+		}
+		force := mcp.ParseBoolean(req, "force", false)
+
+		res, err := svc.Delete(ctx, slug, force)
+		if err != nil {
+			return mcp.NewToolResultErrorFromErr("delete_project", err), nil
+		}
+		return mcp.NewToolResultText(fmt.Sprintf(
+			"Proyecto eliminado: %s (%s). Se borraron %d tarea(s), %d entrada(s) de tiempo y %d timer(s) activo(s).",
+			res.Project.Name, res.Project.Slug,
+			res.TaskCount, res.TimeEntryCount, res.ActiveTimerCount,
 		)), nil
 	}
 }

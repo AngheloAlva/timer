@@ -9,6 +9,17 @@ import (
 	"context"
 )
 
+const countTimeEntriesByTask = `-- name: CountTimeEntriesByTask :one
+SELECT COUNT(*) AS total FROM time_entries WHERE task_id = ?
+`
+
+func (q *Queries) CountTimeEntriesByTask(ctx context.Context, taskID string) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countTimeEntriesByTask, taskID)
+	var total int64
+	err := row.Scan(&total)
+	return total, err
+}
+
 const createTask = `-- name: CreateTask :exec
 INSERT INTO tasks (id, project_id, title, description, status, external_ref, created_at, updated_at)
 VALUES (
@@ -45,6 +56,15 @@ func (q *Queries) CreateTask(ctx context.Context, arg CreateTaskParams) error {
 		arg.CreatedAt,
 		arg.UpdatedAt,
 	)
+	return err
+}
+
+const deleteTask = `-- name: DeleteTask :exec
+DELETE FROM tasks WHERE id = ?
+`
+
+func (q *Queries) DeleteTask(ctx context.Context, id string) error {
+	_, err := q.db.ExecContext(ctx, deleteTask, id)
 	return err
 }
 

@@ -9,12 +9,54 @@ import (
 	"context"
 )
 
+const archiveProject = `-- name: ArchiveProject :exec
+UPDATE projects
+SET archived = 1,
+    updated_at = ?1
+WHERE id = ?2
+`
+
+type ArchiveProjectParams struct {
+	UpdatedAt int64  `json:"updated_at"`
+	ID        string `json:"id"`
+}
+
+func (q *Queries) ArchiveProject(ctx context.Context, arg ArchiveProjectParams) error {
+	_, err := q.db.ExecContext(ctx, archiveProject, arg.UpdatedAt, arg.ID)
+	return err
+}
+
 const countProjects = `-- name: CountProjects :one
 SELECT COUNT(*) AS total FROM projects
 `
 
 func (q *Queries) CountProjects(ctx context.Context) (int64, error) {
 	row := q.db.QueryRowContext(ctx, countProjects)
+	var total int64
+	err := row.Scan(&total)
+	return total, err
+}
+
+const countTasksByProject = `-- name: CountTasksByProject :one
+SELECT COUNT(*) AS total FROM tasks WHERE project_id = ?
+`
+
+func (q *Queries) CountTasksByProject(ctx context.Context, projectID string) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countTasksByProject, projectID)
+	var total int64
+	err := row.Scan(&total)
+	return total, err
+}
+
+const countTimeEntriesByProject = `-- name: CountTimeEntriesByProject :one
+SELECT COUNT(*) AS total
+FROM time_entries te
+JOIN tasks t ON t.id = te.task_id
+WHERE t.project_id = ?
+`
+
+func (q *Queries) CountTimeEntriesByProject(ctx context.Context, projectID string) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countTimeEntriesByProject, projectID)
 	var total int64
 	err := row.Scan(&total)
 	return total, err
@@ -56,6 +98,15 @@ func (q *Queries) CreateProject(ctx context.Context, arg CreateProjectParams) er
 	return err
 }
 
+const deleteProject = `-- name: DeleteProject :exec
+DELETE FROM projects WHERE id = ?
+`
+
+func (q *Queries) DeleteProject(ctx context.Context, id string) error {
+	_, err := q.db.ExecContext(ctx, deleteProject, id)
+	return err
+}
+
 const getProjectBySlug = `-- name: GetProjectBySlug :one
 SELECT id, name, slug, color, archived, created_at, updated_at FROM projects WHERE slug = ? LIMIT 1
 `
@@ -73,6 +124,59 @@ func (q *Queries) GetProjectBySlug(ctx context.Context, slug string) (Project, e
 		&i.UpdatedAt,
 	)
 	return i, err
+}
+
+const listActiveTimersByProject = `-- name: ListActiveTimersByProject :many
+SELECT tm.id, tm.task_id, tm.started_at, tm.note, tm.source,
+       tm.paused_at, tm.paused_total_sec,
+       t.title AS task_title
+FROM timers tm
+JOIN tasks t ON t.id = tm.task_id
+WHERE t.project_id = ?1
+ORDER BY tm.started_at ASC
+`
+
+type ListActiveTimersByProjectRow struct {
+	ID             string  `json:"id"`
+	TaskID         string  `json:"task_id"`
+	StartedAt      int64   `json:"started_at"`
+	Note           *string `json:"note"`
+	Source         string  `json:"source"`
+	PausedAt       *int64  `json:"paused_at"`
+	PausedTotalSec int64   `json:"paused_total_sec"`
+	TaskTitle      string  `json:"task_title"`
+}
+
+func (q *Queries) ListActiveTimersByProject(ctx context.Context, projectID string) ([]ListActiveTimersByProjectRow, error) {
+	rows, err := q.db.QueryContext(ctx, listActiveTimersByProject, projectID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListActiveTimersByProjectRow
+	for rows.Next() {
+		var i ListActiveTimersByProjectRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.TaskID,
+			&i.StartedAt,
+			&i.Note,
+			&i.Source,
+			&i.PausedAt,
+			&i.PausedTotalSec,
+			&i.TaskTitle,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const listProjects = `-- name: ListProjects :many

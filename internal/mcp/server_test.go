@@ -35,7 +35,7 @@ func newTestServer(t *testing.T) *testServer {
 	t.Cleanup(func() { _ = db.Close() })
 
 	q := gen.New(db.Conn())
-	projectSvc := service.NewProjectService(q)
+	projectSvc := service.NewProjectService(db.Conn(), q)
 	taskSvc := service.NewTaskService(db.Conn(), q)
 	timerSvc := service.NewTimerService(db.Conn(), q)
 
