@@ -124,8 +124,8 @@ func (s *ProjectService) List(ctx context.Context, includeArchived bool) ([]doma
 // auto-closed during archive. Each ClosedEntry mirrors a domain.TimeEntry
 // so callers can render "stopped X for Y" feedback.
 type ArchiveResult struct {
-	Project        domain.Project
-	ClosedEntries  []domain.TimeEntry
+	Project         domain.Project
+	ClosedEntries   []domain.TimeEntry
 	AlreadyArchived bool
 }
 
