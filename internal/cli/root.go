@@ -43,6 +43,7 @@ Override the DB path with TIMER_DB_PATH (useful for tests / sandboxes).`,
 		newListCmd(),
 		newLogCmd(),
 		newReportCmd(),
+		newTUICmd(),
 	)
 
 	return cmd

@@ -29,6 +29,7 @@ type Querier interface {
 	PauseTimer(ctx context.Context, arg PauseTimerParams) error
 	ResumeTimer(ctx context.Context, arg ResumeTimerParams) error
 	UpdateTaskStatus(ctx context.Context, arg UpdateTaskStatusParams) error
+	UpdateTaskTitle(ctx context.Context, arg UpdateTaskTitleParams) error
 }
 
 var _ Querier = (*Queries)(nil)

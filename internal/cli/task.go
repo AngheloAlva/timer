@@ -2,6 +2,8 @@ package cli
 
 import (
 	"github.com/spf13/cobra"
+
+	"github.com/AngheloAlva/timer/internal/format"
 )
 
 // newTaskCmd builds the `timer task` command tree.
@@ -38,7 +40,7 @@ subsequent commands.`,
 				return err
 			}
 
-			cmd.Printf("Created %q in %s (id: %s)\n", t.Title, t.ProjectSlug, shortID(t.ID))
+			cmd.Printf("Created %q in %s (id: %s)\n", t.Title, t.ProjectSlug, format.ShortID(t.ID))
 			return nil
 		},
 	}
@@ -84,7 +86,7 @@ func newTaskListCmd() *cobra.Command {
 					cmd.Printf("%s (%s)\n", t.ProjectName, t.ProjectSlug)
 					currentSlug = t.ProjectSlug
 				}
-				cmd.Printf("  %s  [%-11s]  %s\n", shortID(t.ID), t.Status, t.Title)
+				cmd.Printf("  %s  [%-11s]  %s\n", format.ShortID(t.ID), t.Status, t.Title)
 			}
 			return nil
 		},
@@ -118,20 +120,12 @@ flip — so 'task done' is a one-shot "I'm finished here" command.`,
 				return err
 			}
 
-			cmd.Printf("Done: %s  %s\n", shortID(res.Task.ID), res.Task.Title)
+			cmd.Printf("Done: %s  %s\n", format.ShortID(res.Task.ID), res.Task.Title)
 			if res.Entry != nil {
-				cmd.Printf("  (closed running timer → %s)\n", formatDuration(res.Entry.DurationSec))
+				cmd.Printf("  (closed running timer → %s)\n", format.Duration(res.Entry.DurationSec))
 			}
 			return nil
 		},
 	}
 }
 
-// shortID returns the first 8 chars of a UUID for display. Matches the
-// prefix accepted by `task done`.
-func shortID(id string) string {
-	if len(id) <= 8 {
-		return id
-	}
-	return id[:8]
-}

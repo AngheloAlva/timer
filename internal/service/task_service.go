@@ -117,6 +117,45 @@ func (s *TaskService) List(ctx context.Context, projectSlug string, includeDone 
 	return out, nil
 }
 
+// UpdateTitle resolves a task by id-prefix and changes its title. Empty
+// title is rejected. Returns the updated task.
+func (s *TaskService) UpdateTitle(ctx context.Context, idPrefix, newTitle string) (domain.Task, error) {
+	idPrefix = strings.TrimSpace(idPrefix)
+	newTitle = strings.TrimSpace(newTitle)
+	if idPrefix == "" {
+		return domain.Task{}, errors.New("task id prefix cannot be empty")
+	}
+	if newTitle == "" {
+		return domain.Task{}, errors.New("task title cannot be empty")
+	}
+
+	matches, err := s.q.FindTasksByIDPrefix(ctx, idPrefix+"%")
+	if err != nil {
+		return domain.Task{}, fmt.Errorf("resolve task: %w", err)
+	}
+	if len(matches) == 0 {
+		return domain.Task{}, fmt.Errorf("no task matches prefix %q", idPrefix)
+	}
+	if len(matches) > 1 {
+		return domain.Task{}, fmt.Errorf("ambiguous prefix %q: matches %d tasks", idPrefix, len(matches))
+	}
+	t := matches[0]
+
+	now := time.Now()
+	if err := s.q.UpdateTaskTitle(ctx, gen.UpdateTaskTitleParams{
+		ID:        t.ID,
+		Title:     newTitle,
+		UpdatedAt: now.UnixMilli(),
+	}); err != nil {
+		return domain.Task{}, fmt.Errorf("update title: %w", err)
+	}
+
+	out := taskFromGen(t)
+	out.Title = newTitle
+	out.UpdatedAt = now
+	return out, nil
+}
+
 // MarkDoneResult bundles the post-done task with an optional time entry
 // that was committed if the task had an active timer. Entry is nil when
 // no timer was running.

@@ -2,12 +2,12 @@ package cli
 
 import (
 	"errors"
-	"fmt"
 	"time"
 
 	"github.com/spf13/cobra"
 
 	"github.com/AngheloAlva/timer/internal/domain"
+	"github.com/AngheloAlva/timer/internal/format"
 	"github.com/AngheloAlva/timer/internal/service"
 )
 
@@ -35,7 +35,7 @@ timer per task is the only restriction.`,
 			}
 			cmd.Printf("Started %s  %s / %s  (task %s)\n",
 				t.StartedAt.Local().Format("15:04:05"),
-				t.ProjectSlug, t.TaskTitle, shortID(t.TaskID))
+				t.ProjectSlug, t.TaskTitle, format.ShortID(t.TaskID))
 			return nil
 		},
 	}
@@ -74,7 +74,7 @@ timer atomically. Use --all to stop every active timer at once.`,
 					return nil
 				}
 				for _, e := range entries {
-					cmd.Printf("Stopped %s / %s  → %s\n", e.ProjectSlug, e.TaskTitle, formatDuration(e.DurationSec))
+					cmd.Printf("Stopped %s / %s  → %s\n", e.ProjectSlug, e.TaskTitle, format.Duration(e.DurationSec))
 				}
 				return err
 			}
@@ -83,7 +83,7 @@ timer atomically. Use --all to stop every active timer at once.`,
 			if err != nil {
 				return err
 			}
-			cmd.Printf("Stopped %s / %s  → %s\n", entry.ProjectSlug, entry.TaskTitle, formatDuration(entry.DurationSec))
+			cmd.Printf("Stopped %s / %s  → %s\n", entry.ProjectSlug, entry.TaskTitle, format.Duration(entry.DurationSec))
 			return nil
 		},
 	}
@@ -182,11 +182,11 @@ func newListCmd() *cobra.Command {
 					state = "paused "
 				}
 				cmd.Printf("  %s  [%s]  %s / %s  → %s (since %s)\n",
-					shortID(t.TaskID),
+					format.ShortID(t.TaskID),
 					state,
 					t.ProjectSlug,
 					t.TaskTitle,
-					formatDuration(t.ElapsedSec(now)),
+					format.Duration(t.ElapsedSec(now)),
 					t.StartedAt.Local().Format("15:04"),
 				)
 			}
@@ -248,13 +248,13 @@ Defaults to the last 50 entries across all projects. Use --today,
 					e.StartedAt.Local().Format("2006-01-02"),
 					e.StartedAt.Local().Format("15:04"),
 					e.EndedAt.Local().Format("15:04"),
-					formatDuration(e.DurationSec),
+					format.Duration(e.DurationSec),
 					e.ProjectSlug,
 					e.TaskTitle,
 				)
 				total += e.DurationSec
 			}
-			cmd.Printf("\n  Total: %s across %d entries\n", formatDuration(total), len(entries))
+			cmd.Printf("\n  Total: %s across %d entries\n", format.Duration(total), len(entries))
 			return nil
 		},
 	}
@@ -267,20 +267,3 @@ Defaults to the last 50 entries across all projects. Use --today,
 	return cmd
 }
 
-// formatDuration renders seconds as `Hh MMm SSs`, omitting leading zero units.
-func formatDuration(sec int64) string {
-	if sec < 0 {
-		sec = 0
-	}
-	h := sec / 3600
-	m := (sec % 3600) / 60
-	s := sec % 60
-	switch {
-	case h > 0:
-		return fmt.Sprintf("%dh %02dm %02ds", h, m, s)
-	case m > 0:
-		return fmt.Sprintf("%dm %02ds", m, s)
-	default:
-		return fmt.Sprintf("%ds", s)
-	}
-}

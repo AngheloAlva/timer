@@ -155,6 +155,51 @@ func TestTaskService_MarkDone_ClosesActiveTimer(t *testing.T) {
 	}
 }
 
+func TestTaskService_UpdateTitle(t *testing.T) {
+	app := newTestApp(t)
+	ctx := context.Background()
+	if _, err := app.ProjectSvc.Create(ctx, "P"); err != nil {
+		t.Fatal(err)
+	}
+	task, err := app.TaskSvc.Create(ctx, "p", "Old title")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	got, err := app.TaskSvc.UpdateTitle(ctx, task.ID, "New title")
+	if err != nil {
+		t.Fatalf("update: %v", err)
+	}
+	if got.Title != "New title" {
+		t.Errorf("title = %q, want %q", got.Title, "New title")
+	}
+
+	// Re-list and confirm persistence.
+	tasks, _ := app.TaskSvc.List(ctx, "p", false)
+	if len(tasks) != 1 || tasks[0].Title != "New title" {
+		t.Errorf("persistence failed: %v", tasks)
+	}
+}
+
+func TestTaskService_UpdateTitle_RejectsEmpty(t *testing.T) {
+	app := newTestApp(t)
+	ctx := context.Background()
+	if _, err := app.ProjectSvc.Create(ctx, "P"); err != nil {
+		t.Fatal(err)
+	}
+	task, _ := app.TaskSvc.Create(ctx, "p", "Old")
+	if _, err := app.TaskSvc.UpdateTitle(ctx, task.ID, "  "); err == nil {
+		t.Errorf("expected error on empty title")
+	}
+}
+
+func TestTaskService_UpdateTitle_NoMatch(t *testing.T) {
+	app := newTestApp(t)
+	if _, err := app.TaskSvc.UpdateTitle(context.Background(), "deadbeef", "x"); err == nil {
+		t.Errorf("expected error on missing prefix")
+	}
+}
+
 func TestTaskService_MarkDone_NoTimer(t *testing.T) {
 	app := newTestApp(t)
 	ctx := context.Background()

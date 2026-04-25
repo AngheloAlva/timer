@@ -25,6 +25,12 @@ SET status = sqlc.arg(status),
     updated_at = sqlc.arg(updated_at)
 WHERE id = sqlc.arg(id);
 
+-- name: UpdateTaskTitle :exec
+UPDATE tasks
+SET title = sqlc.arg(title),
+    updated_at = sqlc.arg(updated_at)
+WHERE id = sqlc.arg(id);
+
 -- name: ListTasks :many
 SELECT t.id, t.project_id, t.title, t.description, t.status, t.external_ref, t.created_at, t.updated_at,
        p.name AS project_name,
