@@ -31,6 +31,13 @@ func Open(path string) (*DB, error) {
 		return nil, fmt.Errorf("open sqlite: %w", err)
 	}
 
+	// Pin the pool to a single connection. SQLite serialises writes
+	// anyway, and this guarantees PRAGMAs (notably busy_timeout) apply
+	// to every query — pragmas in modernc.org/sqlite are per-connection
+	// and a multi-connection pool would silently lose them on new conns,
+	// surfacing as SQLITE_BUSY under the MCP's concurrent request handling.
+	conn.SetMaxOpenConns(1)
+
 	if err := conn.Ping(); err != nil {
 		conn.Close()
 		return nil, fmt.Errorf("ping sqlite: %w", err)

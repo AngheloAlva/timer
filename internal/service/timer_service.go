@@ -293,6 +293,69 @@ func (s *TimerService) ListEntries(ctx context.Context, opts ListEntriesOpts) ([
 	return out, nil
 }
 
+// LogEntry inserts a manual time_entry for an existing task without going
+// through the timer lifecycle. The returned TimeEntry omits denormalized
+// task/project fields — callers already hold the task they passed in.
+func (s *TimerService) LogEntry(
+	ctx context.Context,
+	taskIDPrefix string,
+	startedAt, endedAt time.Time,
+	note string,
+	source domain.Source,
+) (domain.TimeEntry, error) {
+	taskIDPrefix = strings.TrimSpace(taskIDPrefix)
+	if taskIDPrefix == "" {
+		return domain.TimeEntry{}, errors.New("task id prefix cannot be empty")
+	}
+	if !endedAt.After(startedAt) {
+		return domain.TimeEntry{}, errors.New("endedAt must be strictly after startedAt")
+	}
+	if source == "" {
+		source = domain.SourceManual
+	}
+
+	matches, err := s.q.FindTasksByIDPrefix(ctx, taskIDPrefix+"%")
+	if err != nil {
+		return domain.TimeEntry{}, fmt.Errorf("resolve task: %w", err)
+	}
+	if len(matches) == 0 {
+		return domain.TimeEntry{}, fmt.Errorf("no task matches prefix %q", taskIDPrefix)
+	}
+	if len(matches) > 1 {
+		return domain.TimeEntry{}, fmt.Errorf("ambiguous prefix %q: matches %d tasks", taskIDPrefix, len(matches))
+	}
+	task := matches[0]
+
+	durationSec := int64(endedAt.Sub(startedAt).Seconds())
+	now := time.Now()
+	entryID := uuid.NewString()
+	notePtr := stringPtrOrNil(note)
+
+	if err := s.q.CreateTimeEntry(ctx, gen.CreateTimeEntryParams{
+		ID:          entryID,
+		TaskID:      task.ID,
+		StartedAt:   startedAt.UnixMilli(),
+		EndedAt:     endedAt.UnixMilli(),
+		DurationSec: durationSec,
+		Note:        notePtr,
+		Source:      string(source),
+		CreatedAt:   now.UnixMilli(),
+	}); err != nil {
+		return domain.TimeEntry{}, fmt.Errorf("create time entry: %w", err)
+	}
+
+	return domain.TimeEntry{
+		ID:          entryID,
+		TaskID:      task.ID,
+		StartedAt:   startedAt,
+		EndedAt:     endedAt,
+		DurationSec: durationSec,
+		Note:        note,
+		Source:      source,
+		CreatedAt:   now,
+	}, nil
+}
+
 // resolveActiveTimerByTaskPrefix loads the active timer whose task.id matches
 // the given prefix. Since timers have UNIQUE(task_id), there is at most one
 // timer per task — task-prefix resolution is unambiguous up to the task itself.
