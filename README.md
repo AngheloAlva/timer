@@ -13,6 +13,10 @@ brew install AngheloAlva/tap/timer
 timer init
 ```
 
+> The fully-qualified `AngheloAlva/tap/timer` is required to avoid a name
+> collision with a deprecated `timer` formula still listed in homebrew-core.
+> Once that ghost is removed upstream, `brew install timer` will work too.
+
 ### Manual download
 
 Grab the tarball for your OS/arch from
