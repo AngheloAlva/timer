@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 
 	"github.com/AngheloAlva/timer/internal/service"
 	"github.com/AngheloAlva/timer/internal/storage/gen"
@@ -65,21 +66,44 @@ func (a *appCtx) Close() error {
 // resolveDBPath returns the path where timer stores its SQLite file.
 // Order of resolution:
 //  1. $TIMER_DB_PATH (override, useful for tests and dev)
-//  2. ~/.local/share/timer/timer.db (XDG default on linux/macOS)
+//  2. Per-OS default:
+//     - linux/macOS: ~/.local/share/timer/timer.db (XDG)
+//     - windows:     %LOCALAPPDATA%\timer\timer.db
 func resolveDBPath() (string, error) {
 	if p := os.Getenv("TIMER_DB_PATH"); p != "" {
 		return p, nil
+	}
+
+	dir, err := defaultDataDir()
+	if err != nil {
+		return "", err
+	}
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return "", fmt.Errorf("create data dir: %w", err)
+	}
+
+	return filepath.Join(dir, "timer.db"), nil
+}
+
+// defaultDataDir returns the per-OS directory where timer stores its data.
+// On Windows we prefer %LOCALAPPDATA% (non-roaming) and fall back to
+// os.UserConfigDir() if the env var is unset. On linux/macOS we keep the
+// historical ~/.local/share/timer path so existing installations don't move.
+func defaultDataDir() (string, error) {
+	if runtime.GOOS == "windows" {
+		if base := os.Getenv("LOCALAPPDATA"); base != "" {
+			return filepath.Join(base, "timer"), nil
+		}
+		base, err := os.UserConfigDir()
+		if err != nil {
+			return "", err
+		}
+		return filepath.Join(base, "timer"), nil
 	}
 
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return "", err
 	}
-
-	dir := filepath.Join(home, ".local", "share", "timer")
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		return "", fmt.Errorf("create data dir: %w", err)
-	}
-
-	return filepath.Join(dir, "timer.db"), nil
+	return filepath.Join(home, ".local", "share", "timer"), nil
 }

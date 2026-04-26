@@ -19,9 +19,10 @@ timer init
 
 ### Manual download
 
-Grab the tarball for your OS/arch from
-[GitHub Releases](https://github.com/AngheloAlva/timer/releases), extract,
-move `timer` into your `PATH`, then run `timer init`.
+Grab the archive for your OS/arch from
+[GitHub Releases](https://github.com/AngheloAlva/timer/releases) (`.tar.gz`
+on macOS/Linux, `.zip` on Windows), extract, move `timer` into your `PATH`,
+then run `timer init`.
 
 On macOS, binaries are not signed. Drop the quarantine flag once after
 installing manually:
@@ -38,8 +39,26 @@ xattr -d com.apple.quarantine /usr/local/bin/timer
 git clone https://github.com/AngheloAlva/timer
 cd timer
 make build              # produces ./bin/timer
-./bin/timer init        # creates ~/.local/share/timer/timer.db
+./bin/timer init        # creates the SQLite DB (see "Data location" below)
 ```
+
+On Windows (PowerShell), without `make`:
+
+```powershell
+git clone https://github.com/AngheloAlva/timer
+cd timer
+$env:CGO_ENABLED=0; go build -o bin\timer.exe .\cmd\timer
+.\bin\timer.exe init
+```
+
+## Data location
+
+Default DB path by OS:
+
+- **macOS / Linux**: `~/.local/share/timer/timer.db`
+- **Windows**: `%LOCALAPPDATA%\timer\timer.db`
+
+Override with `TIMER_DB_PATH` (useful for tests / sandboxes).
 
 ## CLI quick start
 
@@ -52,8 +71,6 @@ timer stop  <task-id>                 # stop and store a time entry
 timer log --today                     # what you logged today
 timer report --week                   # totals grouped by project / task
 ```
-
-Override the DB path with `TIMER_DB_PATH` (useful for tests / sandboxes).
 
 ## TUI
 
@@ -73,6 +90,19 @@ your client by pointing at the absolute path of the binary:
   "mcpServers": {
     "timer": {
       "command": "/usr/local/bin/timer",
+      "args": ["mcp"]
+    }
+  }
+}
+```
+
+On Windows use the full path to `timer.exe` (forward slashes are fine in JSON):
+
+```json
+{
+  "mcpServers": {
+    "timer": {
+      "command": "C:/Users/<you>/AppData/Local/Programs/timer/timer.exe",
       "args": ["mcp"]
     }
   }
