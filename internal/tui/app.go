@@ -80,16 +80,31 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	}
 
-	var cmd tea.Cmd
-	switch m.current {
-	case viewDashboard:
-		m.dashboard, cmd = m.dashboard.Update(msg)
-	case viewTasks:
-		m.tasks, cmd = m.tasks.Update(msg)
-	case viewReports:
-		m.reports, cmd = m.reports.Update(msg)
+	// KeyMsg only reaches the active view (so j/k/enter don't trigger
+	// background views). Everything else (load results, ticks, window
+	// resizes) broadcasts to all three so their async chains stay alive.
+	if _, isKey := msg.(tea.KeyMsg); isKey {
+		var cmd tea.Cmd
+		switch m.current {
+		case viewDashboard:
+			m.dashboard, cmd = m.dashboard.Update(msg)
+		case viewTasks:
+			m.tasks, cmd = m.tasks.Update(msg)
+		case viewReports:
+			m.reports, cmd = m.reports.Update(msg)
+		}
+		return m, cmd
 	}
-	return m, cmd
+
+	var cmds []tea.Cmd
+	var cmd tea.Cmd
+	m.dashboard, cmd = m.dashboard.Update(msg)
+	cmds = append(cmds, cmd)
+	m.tasks, cmd = m.tasks.Update(msg)
+	cmds = append(cmds, cmd)
+	m.reports, cmd = m.reports.Update(msg)
+	cmds = append(cmds, cmd)
+	return m, tea.Batch(cmds...)
 }
 
 func (m AppModel) View() string {
