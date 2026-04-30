@@ -100,7 +100,7 @@ func FetchLatest(ctx context.Context) (*Release, error) {
 	if err != nil {
 		return nil, fmt.Errorf("fetch release: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(io.LimitReader(resp.Body, 512))
 		return nil, fmt.Errorf("github api %s: %s", resp.Status, strings.TrimSpace(string(body)))
@@ -198,7 +198,7 @@ func ApplyStandalone(ctx context.Context, asset *Asset) error {
 	if err != nil {
 		return fmt.Errorf("download asset: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("download %s: %s", asset.Name, resp.Status)
 	}
@@ -235,14 +235,14 @@ func extractBinary(body io.Reader, archiveName, binName string) (io.Reader, func
 		}
 		size, err := io.Copy(tmp, body)
 		if err != nil {
-			tmp.Close()
-			os.Remove(tmp.Name())
+			_ = tmp.Close()
+			_ = os.Remove(tmp.Name())
 			return nil, func() {}, fmt.Errorf("buffer zip: %w", err)
 		}
 		zr, err := zip.NewReader(tmp, size)
 		if err != nil {
-			tmp.Close()
-			os.Remove(tmp.Name())
+			_ = tmp.Close()
+			_ = os.Remove(tmp.Name())
 			return nil, func() {}, fmt.Errorf("open zip: %w", err)
 		}
 		var entry *zip.File
@@ -253,20 +253,20 @@ func extractBinary(body io.Reader, archiveName, binName string) (io.Reader, func
 			}
 		}
 		if entry == nil {
-			tmp.Close()
-			os.Remove(tmp.Name())
+			_ = tmp.Close()
+			_ = os.Remove(tmp.Name())
 			return nil, func() {}, fmt.Errorf("binary %q not found in %s", binName, archiveName)
 		}
 		rc, err := entry.Open()
 		if err != nil {
-			tmp.Close()
-			os.Remove(tmp.Name())
+			_ = tmp.Close()
+			_ = os.Remove(tmp.Name())
 			return nil, func() {}, err
 		}
 		cleanup := func() {
-			rc.Close()
-			tmp.Close()
-			os.Remove(tmp.Name())
+			_ = rc.Close()
+			_ = tmp.Close()
+			_ = os.Remove(tmp.Name())
 		}
 		return rc, cleanup, nil
 	}
@@ -280,15 +280,15 @@ func extractBinary(body io.Reader, archiveName, binName string) (io.Reader, func
 	for {
 		h, err := tr.Next()
 		if err == io.EOF {
-			gz.Close()
+			_ = gz.Close()
 			return nil, func() {}, fmt.Errorf("binary %q not found in %s", binName, archiveName)
 		}
 		if err != nil {
-			gz.Close()
+			_ = gz.Close()
 			return nil, func() {}, fmt.Errorf("tar read: %w", err)
 		}
 		if filepath.Base(h.Name) == binName {
-			return tr, func() { gz.Close() }, nil
+			return tr, func() { _ = gz.Close() }, nil
 		}
 	}
 }
